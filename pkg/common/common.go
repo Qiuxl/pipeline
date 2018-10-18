@@ -48,6 +48,7 @@ const (
 // Constants for labeling cluster nodes
 const (
 	LabelKey = "nodepool.banzaicloud.io/name"
+	OnDemandLabelKey = "node.banzaicloud.com/ondemand"
 )
 
 // Constant for tainting head node
