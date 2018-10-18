@@ -498,7 +498,7 @@ func installDeployment(cluster CommonCluster, namespace string, deploymentName s
 		}
 	}
 
-	_, err = helm.CreateDeployment(deploymentName, chartVersion, nil, namespace, releaseName, false, values, kubeConfig, helm.GenerateHelmRepoEnv(org.Name), helm.DefaultInstallOptions...)
+	_, err = helm.CreateDeployment(deploymentName, chartVersion, nil, namespace, releaseName, false, values, nil, kubeConfig, helm.GenerateHelmRepoEnv(org.Name), helm.DefaultInstallOptions...)
 	if err != nil {
 		log.Errorf("Deploying '%s' failed due to: %s", deploymentName, err.Error())
 		return err
@@ -1199,4 +1199,40 @@ func RestoreFromBackup(input interface{}, param pkgCluster.PostHookParam) error 
 	}
 
 	return ark.RestoreFromBackup(params, cluster, pipConfig.DB(), log)
+}
+
+// InitSpotConfig creates a ConfigMap to store spot related config
+func InitSpotConfig(input interface{}) error {
+	cluster, ok := input.(CommonCluster)
+	if !ok {
+		return errors.Errorf("Wrong parameter type: %T", cluster)
+	}
+
+	log.Info("Initializing ConfigMap to store spot configuration")
+	log.Debug("get K8S config")
+	kubeConfig, err := cluster.GetK8sConfig()
+	if err != nil {
+		return err
+	}
+
+	log.Debug("get K8S connection")
+	client, err := helm.GetK8sConnection(kubeConfig)
+	if err != nil {
+		return err
+	}
+
+	pipelineSystemNamespace := viper.GetString(pipConfig.PipelineSystemNamespace)
+	_, err = client.CoreV1().ConfigMaps(pipelineSystemNamespace).Create(&v1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: pkgCommon.SpotConfigMapKey,
+		},
+		Data: make(map[string]string),
+	})
+	if err != nil {
+		return err
+	}
+
+	log.Info("Finished initializing spot ConfigMap")
+
+	return nil
 }

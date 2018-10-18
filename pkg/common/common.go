@@ -54,3 +54,7 @@ const (
 const (
 	HeadNodeTaintKey = "nodepool.banzaicloud.io/name"
 )
+
+const (
+	SpotConfigMapKey = "spot-deploy-config"
+)
