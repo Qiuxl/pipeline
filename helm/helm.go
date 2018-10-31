@@ -365,14 +365,12 @@ func CreateDeployment(chartName, chartVersion string, chartPackage []byte, names
 	}
 
 	if !dryRun && odPcts != nil {
-		fmt.Println("**itt vagyunk")
-
-		// if releasename == ""
 		// if resource doesn't exist in the template
-
+		if len(releaseName) == 0 {
+			return nil, fmt.Errorf("release name cannot be empty when setting on-demand percentages")
+		}
 		client, err := k8sclient.NewClientFromKubeConfig(kubeConfig)
 		if err != nil {
-			fmt.Println("hiba0", err)
 			return nil, err
 		}
 		pipelineSystemNamespace := viper.GetString(config.PipelineSystemNamespace)
@@ -380,12 +378,13 @@ func CreateDeployment(chartName, chartVersion string, chartPackage []byte, names
 		// if configmap doesn't exist
 		configmap, err := client.CoreV1().ConfigMaps(pipelineSystemNamespace).Get(common.SpotConfigMapKey, metav1.GetOptions{})
 		if err != nil {
-			fmt.Println("hiba1", err)
 			return nil, err
 		}
-		fmt.Println("**relName:", releaseName)
+		if configmap.Data == nil {
+			configmap.Data = make(map[string]string)
+		}
 		for res, pct := range odPcts {
-			configmap.Data[releaseName+"_"+res] = string(pct)
+			configmap.Data[releaseName+"."+res] = fmt.Sprintf("%d", pct)
 		}
 		_, err = client.CoreV1().ConfigMaps(pipelineSystemNamespace).Update(configmap)
 		if err != nil {
@@ -467,6 +466,9 @@ func ParseReleaseManifest(manifest string, resourceTypes []string) ([]pkgHelm.De
 	deployments := make([]pkgHelm.DeploymentResource, 0)
 
 	for _, object := range objects {
+
+		fmt.Println("***")
+		fmt.Println(object)
 
 		obj, _, err := decode([]byte(object), nil, nil)
 
